@@ -32,6 +32,35 @@ function streamToConsole(readable) {
 }
 ```
 
+```js
+function streamToConsole(readable) {
+    return pump();
+
+    function pump() {
+        if (readable.state === "closed") {
+            console.log("--all done!");
+            return;
+        }
+
+        return readable.readAsync().then(chunk => {
+            console.log(chunk);
+            return pump();
+        });
+    }
+}
+```
+
+```js
+async function streamToConsole(readable) {
+    while (readable.state !== "closed") {
+        var chunk = await readable.readAsync();
+        console.log(chunk);
+    }
+
+    console.log("--all done!");
+}
+```
+
 #### Getting the Next Piece of Available Data
 
 As another example, this helper function will return a promise for the next available piece of data from a given readable stream. This introduces an artificial delay if there is already data queued, but can provide a convenient interface for simple chunk-by-chunk consumption, as one might do e.g. when streaming database records. It uses an EOF sentinel to signal the end of the stream, and behaves poorly if called twice in parallel without waiting for the previously-returned promise to fulfill.
@@ -93,6 +122,24 @@ readableStreamToArray(myStream).then(chunks => {
     console.log("First chunk:", chunks[0]);
     console.log("Last chunk:", chunks[chunks.length - 1]);
 })
+```
+
+```js
+function readableStreamToArray(readable) {
+    return pump();
+
+    var chunks = [];
+    function pump() {
+        if (readable.state === "closed") {
+            return chunks;
+        }
+
+        return readable.readAsync().then(chunk => {
+            chunks.push(chunk);
+            return pump();
+        });
+    }
+}
 ```
 
 ### Creation

@@ -56,6 +56,20 @@ export default class ReadableStream {
     return this._state;
   }
 
+  readAsync() {
+    if (this._state === 'waiting') {
+      return this.wait().then(() => this._readImpl());
+    }
+    if (this._state === 'closed') {
+      return Promise.reject(new TypeError('stream has already been consumed'));
+    }
+    if (this._state === 'errored') {
+      return Promise.reject(this._storedError);
+    }
+
+    return Promise.resolve(this._readImpl());
+  }
+
   read() {
     if (this._state === 'waiting') {
       throw new TypeError('no chunks available (yet)');
@@ -67,6 +81,10 @@ export default class ReadableStream {
       throw this._storedError;
     }
 
+    return this._readImpl();
+  }
+
+  _readImpl() {
     assert(this._state === 'readable', `stream state ${this._state} is invalid`);
     assert(this._queue.length > 0, 'there must be chunks available to read');
 
