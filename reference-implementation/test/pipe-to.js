@@ -9,7 +9,7 @@ test('Piping from a ReadableStream from which lots of data are readable synchron
   var enqueuedChunks = [];
   var rs = new ReadableStream({
     start(enqueue, close) {
-      for (var i = 0; i < 1000; ++i) {
+      for (var i = 0; i < 10; ++i) {
         enqueue(i);
         enqueuedChunks.push(i);
       }
@@ -24,9 +24,9 @@ test('Piping from a ReadableStream from which lots of data are readable synchron
     strategy: new CountQueuingStrategy({
       highWaterMark: 1000
     }),
-    write(chunk) {
-      console.log('hi?', chunk);
+    write(chunk, done) {
       writtenChunks.push(chunk);
+      done();
     },
     close() {
       closeCalled = true;

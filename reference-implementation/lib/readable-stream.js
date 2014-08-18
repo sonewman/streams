@@ -155,11 +155,13 @@ export default class ReadableStream {
     return dest;
 
     function doPipe2() {
-      console.log('source.state', source.state, 'dest.state', dest.state);
-      if ((source.state === 'readable' || source.state === 'waiting') &&
+      if (source.state === 'errored') {
+        source.closed.catch(abortDest);
+      } else if (source.state === 'closed' && (dest.state === 'writable' || dest.state === 'waiting')) {
+        closeDest();
+      } else if ((source.state === 'readable' || source.state === 'waiting') &&
           (dest.state === 'writable' || dest.state === 'waiting')) {
         Promise.all([source.readAsync(), dest.wait()]).then(([c]) => {
-          console.log('chunk!', c);
           dest.write(c).catch(cancelSource);
           // Do not block until the write completes; if dest is willing to accept multiple chunks, give them.
           return undefined;
