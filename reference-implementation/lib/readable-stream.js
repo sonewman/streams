@@ -151,42 +151,56 @@ export default class ReadableStream {
     var source = this;
     close = Boolean(close);
 
-    doPipe();
+    doPipe2();
     return dest;
 
+    function doPipe2() {
+      console.log('source.state', source.state, 'dest.state', dest.state);
+      if ((source.state === 'readable' || source.state === 'waiting') &&
+          (dest.state === 'writable' || dest.state === 'waiting')) {
+        Promise.all([source.readAsync(), dest.wait()]).then(([c]) => {
+          console.log('chunk!', c);
+          dest.write(c).catch(cancelSource);
+          // Do not block until the write completes; if dest is willing to accept multiple chunks, give them.
+          return undefined;
+        }).then(doPipe2, doPipe2);
+      } else if (dest.state === 'errored' &&
+          (source.state === 'readable' || source.state === 'waiting')) {
+        dest.wait().catch(cancelSource);
+      } else if ((dest.state === 'closing' || dest.state === 'closed') &&
+          (source.state === 'readable' || source.state === 'waiting')) {
+        cancelSource(new TypeError(
+            'destination is closing or closed and cannot be piped to anymore'));
+      }
+    }
+
     function doPipe() {
-      for (;;) {
-        var ds = dest.state;
-        if (ds === 'writable') {
-          if (source.state === 'readable') {
-            dest.write(source.read()).catch(cancelSource);
-            continue;
-          } else if (source.state === 'waiting') {
-            Promise.race([source.wait(), dest.closed]).then(doPipe, doPipe);
-          } else if (source.state === 'errored') {
-            source.wait().catch(abortDest);
-          } else if (source.state === 'closed') {
-            closeDest();
-          }
-        } else if (ds === 'waiting') {
-          if (source.state === 'readable') {
-            Promise.race([source.closed, dest.wait()]).then(doPipe, doPipe);
-          } else if (source.state === 'waiting') {
-            Promise.race([source.wait(), dest.wait()]).then(doPipe, doPipe);
-          } else if (source.state === 'errored') {
-            source.wait().catch(abortDest);
-          } else if (source.state === 'closed') {
-            closeDest();
-          }
-        } else if (ds === 'errored' &&
-            (source.state === 'readable' || source.state === 'waiting')) {
-          dest.wait().catch(cancelSource);
-        } else if ((ds === 'closing' || ds === 'closed') &&
-            (source.state === 'readable' || source.state === 'waiting')) {
-          cancelSource(new TypeError(
-              'destination is closing or closed and cannot be piped to anymore'));
+      var ds = dest.state;
+      if (ds === 'writable') {
+        if (source.state === 'readable' || source.state === 'waiting') {
+          source.readAsync().then(c => dest.write(c)).then(doPipe, doPipe);
+        } else if (source.state === 'errored') {
+          source.wait().catch(abortDest);
+        } else if (source.state === 'closed') {
+          closeDest();
         }
-        return;
+      } else if (ds === 'waiting') {
+        if (source.state === 'readable') {
+          Promise.race([source.closed, dest.wait()]).then(doPipe, doPipe);
+        } else if (source.state === 'waiting') {
+          Promise.race([source.wait(), dest.wait()]).then(doPipe, doPipe);
+        } else if (source.state === 'errored') {
+          source.wait().catch(abortDest);
+        } else if (source.state === 'closed') {
+          closeDest();
+        }
+      } else if (ds === 'errored' &&
+          (source.state === 'readable' || source.state === 'waiting')) {
+        dest.wait().catch(cancelSource);
+      } else if ((ds === 'closing' || ds === 'closed') &&
+          (source.state === 'readable' || source.state === 'waiting')) {
+        cancelSource(new TypeError(
+            'destination is closing or closed and cannot be piped to anymore'));
       }
     }
 

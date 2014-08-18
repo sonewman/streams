@@ -6,28 +6,41 @@ import CountQueuingStrategy from '../lib/count-queuing-strategy';
 import sequentialReadableStream from './utils/sequential-rs';
 
 test('Piping from a ReadableStream from which lots of data are readable synchronously', t => {
+  var enqueuedChunks = [];
   var rs = new ReadableStream({
     start(enqueue, close) {
       for (var i = 0; i < 1000; ++i) {
         enqueue(i);
+        enqueuedChunks.push(i);
       }
       close();
     }
   });
   t.equal(rs.state, 'readable');
 
+  var writtenChunks = [];
+  var closeCalled = true;
   var ws = new WritableStream({
     strategy: new CountQueuingStrategy({
       highWaterMark: 1000
-    })
+    }),
+    write(chunk) {
+      console.log('hi?', chunk);
+      writtenChunks.push(chunk);
+    },
+    close() {
+      closeCalled = true;
+    }
   });
   t.equal(ws.state, 'writable');
 
-  rs.pipeTo(ws);
-  t.equal(rs.state, 'closed', 'all data must be read out from rs');
-  t.equal(ws.state, 'closing', 'close must have been called after accepting all data from rs');
-
-  t.end();
+  rs.pipeTo(ws).closed.then(() => {
+    t.equal(rs.state, 'closed', 'rs must be closed');
+    t.equal(ws.state, 'closed', 'ws must be closed');
+    t.ok(closeCalled, 'close must have been called on the underlying sink');
+    t.deepEqual(writtenChunks, enqueuedChunks, 'all chunks enqueued into rs must have been written to ws');
+    t.end();
+  });
 });
 
 test('Piping from a ReadableStream in readable state to a WritableStream in closing state', t => {
