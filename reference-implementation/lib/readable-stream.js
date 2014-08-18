@@ -157,11 +157,14 @@ export default class ReadableStream {
     function doPipe2() {
       if (source.state === 'errored') {
         source.closed.catch(abortDest);
+      } else if (dest.state === 'errored') {
+        dest.closed.catch(cancelSource);
       } else if (source.state === 'closed' && (dest.state === 'writable' || dest.state === 'waiting')) {
         closeDest();
       } else if ((source.state === 'readable' || source.state === 'waiting') &&
           (dest.state === 'writable' || dest.state === 'waiting')) {
-        Promise.all([source.readAsync(), dest.wait()]).then(([c]) => {
+        // TODO: this mess is because we do both dest writable and dest waiting; dest.closed only necessary for dest waiting (maybe?)
+        Promise.race([Promise.all([source.readAsync(), dest.wait()]), dest.closed]).then(([c]) => {
           dest.write(c).catch(cancelSource);
           // Do not block until the write completes; if dest is willing to accept multiple chunks, give them.
           return undefined;
