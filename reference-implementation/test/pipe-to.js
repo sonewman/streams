@@ -540,10 +540,6 @@ test('Piping from a ReadableStream in readable state to a WritableStream in wait
     start(enqueue) {
       enqueue('World');
     },
-    pull() {
-      t.fail('Unexpected pull call');
-      t.end();
-    },
     cancel() {
       t.assert(writeCalled);
 
