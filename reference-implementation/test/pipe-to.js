@@ -9,7 +9,7 @@ test('Piping from a ReadableStream from which lots of data are readable synchron
   var enqueuedChunks = [];
   var rs = new ReadableStream({
     start(enqueue, close) {
-      for (var i = 0; i < 10; ++i) {
+      for (var i = 0; i < 1000; ++i) {
         enqueue(i);
         enqueuedChunks.push(i);
       }
