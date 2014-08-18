@@ -995,13 +995,14 @@ test('Piping to a stream that synchronously errors passes through the error as t
   }, 10);
 });
 
-test('Piping to a stream that asynchronously errors passes through the error as the cancellation reason', t => {
+test.only('Piping to a stream that asynchronously errors passes through the error as the cancellation reason', t => {
   var recordedReason;
   var rs = new ReadableStream({
     start(enqueue, close) {
       enqueue('a');
       enqueue('b');
       enqueue('c');
+      enqueue('d');
       close();
     },
     cancel(reason) {
