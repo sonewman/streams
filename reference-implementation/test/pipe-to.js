@@ -494,16 +494,16 @@ test('Piping from a ReadableStream in readable state to a WritableStream in wait
   t.equal(rs.state, 'readable');
 
   var done;
+  var secondChunkWritten = false;
   var ws = new WritableStream({
     write(chunk, done_) {
       if (!done) {
-        t.equal(chunk, 'Hello');
+        t.equal(chunk, 'Hello', 'First chunk must be "Hello"');
         done = done_;
       } else {
-        t.equal(chunk, 'World');
-
-        t.equal(pullCount, 1);
-
+        secondChunkWritten = true;
+        t.equal(chunk, 'World', 'Second chunk must be "World"');
+        t.equal(pullCount, 1, 'Pull must have been called once');
         t.end();
       }
     },
@@ -520,14 +520,14 @@ test('Piping from a ReadableStream in readable state to a WritableStream in wait
 
   // Wait for ws to start.
   setTimeout(() => {
-    t.equal(ws.state, 'waiting');
+    t.equal(ws.state, 'waiting', 'ws should be waiting before pipe');
 
     rs.pipeTo(ws);
-    t.equal(rs.state, 'readable', 'transfer of data must not happen until ws becomes writable');
-    t.equal(ws.state, 'waiting');
+    t.equal(secondChunkWritten, false, 'second chunk must not be written while ws is not writable');
+    t.equal(ws.state, 'waiting', 'ws should still be waiting after the pipe');
 
     done();
-    t.equal(ws.state, 'writable');
+    t.equal(ws.state, 'writable', 'ws should be writable after the chunk is consumed');
   }, 0);
 });
 
@@ -576,7 +576,6 @@ test('Piping from a ReadableStream in readable state to a WritableStream in wait
     t.equal(ws.state, 'waiting');
 
     rs.pipeTo(ws);
-    t.equal(rs.state, 'readable', 'transfer of data must not happen until ws becomes writable');
     t.equal(ws.state, 'waiting');
 
     errorWritableStream();
@@ -626,7 +625,6 @@ test('Piping from a ReadableStream in readable state which becomes errored after
     t.equal(ws.state, 'waiting');
 
     rs.pipeTo(ws);
-    t.equal(rs.state, 'readable', 'transfer of data must not happen until ws becomes writable');
     t.equal(ws.state, 'waiting');
 
     errorReadableStream();
