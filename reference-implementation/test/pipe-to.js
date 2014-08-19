@@ -587,10 +587,6 @@ test('Piping from a ReadableStream in readable state which becomes errored after
       enqueue('World');
       errorReadableStream = error;
     },
-    pull() {
-      t.fail('Unexpected pull call');
-      t.end();
-    },
     cancel() {
       t.fail('Unexpected cancel call');
       t.end();
@@ -683,7 +679,7 @@ test('Piping from a ReadableStream in waiting state to a WritableStream in waiti
     // Check that nothing happens before calling done(), and then call done()
     // to check that pipeTo is woken up.
     setTimeout(() => {
-      t.equal(pullCount, 1);
+      t.equal(pullCount, 2);
 
       checkSecondWrite = true;
 
@@ -995,7 +991,7 @@ test('Piping to a stream that synchronously errors passes through the error as t
   }, 10);
 });
 
-test.only('Piping to a stream that asynchronously errors passes through the error as the cancellation reason', t => {
+test('Piping to a stream that asynchronously errors passes through the error as the cancellation reason', t => {
   var recordedReason;
   var rs = new ReadableStream({
     start(enqueue, close) {
