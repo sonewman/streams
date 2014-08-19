@@ -579,7 +579,7 @@ test('Piping from a ReadableStream in readable state to a WritableStream in wait
   }, 0);
 });
 
-test('Piping from a ReadableStream in readable state which becomes errored after pipeTo call to a WritableStream in ' +
+test.only('Piping from a ReadableStream in readable state which becomes errored after pipeTo call to a WritableStream in ' +
     'waiting state', t => {
   var errorReadableStream;
   var rs = new ReadableStream({
@@ -607,6 +607,7 @@ test('Piping from a ReadableStream in readable state which becomes errored after
       t.end();
     },
     abort() {
+      t.pass('abort was called');
       t.end();
     }
   });
@@ -679,7 +680,7 @@ test('Piping from a ReadableStream in waiting state to a WritableStream in waiti
     // Check that nothing happens before calling done(), and then call done()
     // to check that pipeTo is woken up.
     setTimeout(() => {
-      t.equal(pullCount, 2);
+      t.equal(pullCount, 1);
 
       checkSecondWrite = true;
 
